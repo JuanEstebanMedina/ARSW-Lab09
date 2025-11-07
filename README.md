@@ -1,5 +1,14 @@
-### Escuela Colombiana de Ingeniería
-### Arquitecturas de Software - ARSW
+# ARSW-Lab09 - Load Balancing
+
+**Escuela Colombiana de Ingeniería Julio Garavito**  
+**Arquitecturas de Software - ARSW**  
+**Laboratorio Número 9 - Balanceador de Carga**
+
+**Miembros:**
+- Juan Esteban Medina Rivas
+- María Paula Sánchez Macías
+
+---
 
 ## Escalamiento en Azure con Maquinas Virtuales, Sacale Sets y Service Plans
 
