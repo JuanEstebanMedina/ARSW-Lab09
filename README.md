@@ -1,7 +1,7 @@
 # ARSW-Lab09 - Load Balancing
 
-**Escuela Colombiana de Ingeniería Julio Garavito**
-**Arquitecturas de Software - ARSW**
+**Escuela Colombiana de Ingeniería Julio Garavito**\
+**Arquitecturas de Software - ARSW**\
 **Laboratorio Número 9 - Balanceador de Carga**
 
 **Miembros:**
@@ -500,57 +500,101 @@ newman run ARSW_LOAD-BALANCING_AZURE.postman_collection.json -e [ARSW_LOAD-BALAN
 
 ### Parte 2 - Escalabilidad horizontal
 
-#### Crear el Balanceador de Carga
+## Creación de la Virtual Network
 
-Antes de continuar puede eliminar el grupo de recursos anterior para evitar gastos adicionales y realizar la actividad en un grupo de recursos totalmente limpio.
+Creamos la red virtual que usarán las máquinas virtuales para comunicarse.
 
-1. El Balanceador de Carga es un recurso fundamental para habilitar la escalabilidad horizontal de nuestro sistema, por eso en este paso cree un balanceador de carga dentro de Azure tal cual como se muestra en la imágen adjunta.
+<img src="images/part2-vn-create.png">
 
-![](images/part2/part2-lb-create.png)
+<img src="images/part2-vn-subnet-create.png">
 
-2. A continuación cree un _Backend Pool_, guiese con la siguiente imágen.
+---
 
-![](images/part2/part2-lb-bp-create.png)
+## Configuración del Balanceador de Carga
 
-3. A continuación cree un _Health Probe_, guiese con la siguiente imágen.
+Para implementar escalabilidad horizontal en Azure, creamos un Load Balancer Público y configuramos todos sus componentes esenciales.
 
-![](images/part2/part2-lb-hp-create.png)
+### 1. Creación del Load Balancer
 
-4. A continuación cree un _Load Balancing Rule_, guiese con la siguiente imágen.
+Creamos el recurso siguiendo las especificaciones del laboratorio.
 
-![](images/part2/part2-lb-lbr-create.png)
+<img src="images/part2-lb-create.png">
 
-5. Cree una _Virtual Network_ dentro del grupo de recursos, guiese con la siguiente imágen.
+El Load Balancer nos permitirá distribuir las peticiones entrantes entre múltiples máquinas virtuales, habilitando alta disponibilidad y tolerancia a fallos.
 
-![](images/part2/part2-vn-create.png)
+---
 
-#### Crear las maquinas virtuales (Nodos)
+## Backend Pool
 
-Ahora vamos a crear 3 VMs (VM1, VM2 y VM3) con direcciones IP públicas standar en 3 diferentes zonas de disponibilidad. Después las agregaremos al balanceador de carga.
+Creamos un Backend Pool para agrupar las máquinas virtuales que procesarán las solicitudes.
+Al principio no teníamos máquinas virtuales creadas, por lo que aparecerá vacío. Posteriormente en la creación de las VMs, las agregaremos al Backend Pool.
 
-1. En la configuración básica de la VM guíese por la siguiente imágen. Es importante que se fije en la "Avaiability Zone", donde la VM1 será 1, la VM2 será 2 y la VM3 será 3.
+<img src="images/part2-lb-bp-create.png">
 
-![](images/part2/part2-vm-create1.png)
+---
 
-2. En la configuración de networking, verifique que se ha seleccionado la _Virtual Network_ y la _Subnet_ creadas anteriormente. Adicionalmente asigne una IP pública y no olvide habilitar la redundancia de zona.
+## Health Probe
 
-![](images/part2/part2-vm-create2.png)
+Creamos luego un Health Probe, la cual valida que cada VM esté disponible antes de que reciba tráfico.
 
-3. Para el Network Security Group seleccione "avanzado" y realice la siguiente configuración. No olvide crear un _Inbound Rule_, en el cual habilite el tráfico por el puerto 3000. Cuando cree la VM2 y la VM3, no necesita volver a crear el _Network Security Group_, sino que puede seleccionar el anteriormente creado.
+<img src="images/part2-lb-hp-create.png">
 
-![](images/part2/part2-vm-create3.png)
+---
 
-4. Ahora asignaremos esta VM a nuestro balanceador de carga, para ello siga la configuración de la siguiente imágen.
+## Load Balancing Rule
 
-![](images/part2/part2-vm-create4.png)
+Creamos la regla que define cómo distribuir las solicitudes entre las máquinas del Backend Pool.
 
-5. Finalmente debemos instalar la aplicación de Fibonacci en la VM. para ello puede ejecutar el conjunto de los siguientes comandos, cambiando el nombre de la VM por el correcto
+<img src="images/part2-lb-lbr-create.png">
 
-```
+---
+
+Creamos 3 máquinas virtuales con las mismas características, cada una en una Availability Zone diferente.
+
+> Debido a la restricción de Azure for Students, solo se permitió crear 2 zonas.
+> Para efectos del laboratorio, se trabajó con VM1 (zona 1) y VM2 (zona 2).
+
+<img src="images/VMzone3.png">
+
+---
+
+### 1. Configuración básica de cada VM
+
+<img src="images/part2-vm-create1.png">
+
+---
+
+### 2. Networking
+
+Seleccionamos la VNet y Subnet creadas anteriormente.
+
+### 3. Network Security Group (NSG)
+
+Creamos un NSG avanzado y configuramos la regla inbound para habilitar el puerto 3000.
+
+### 4. Asociar cada VM al Load Balancer
+
+<img src="images/part2-vm-create2.png">
+
+---
+
+## Recursos Creados
+
+Aqui se muestran los recursos creados en Azure para esta parte del laboratorio.
+
+<img src="images/AllResources.png">
+
+---
+
+# Instalación de la aplicación en cada VM
+
+En cada máquina virtual ejecutamos:
+
+```bash
 git clone https://github.com/daprieto1/ARSW_LOAD-BALANCING_AZURE.git
 
 curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
-source /home/vm1/.bashrc
+source ~/.bashrc
 nvm install node
 
 cd ARSW_LOAD-BALANCING_AZURE/FibonacciApp
@@ -560,20 +604,58 @@ npm install forever -g
 forever start FibonacciApp.js
 ```
 
-Realice este proceso para las 3 VMs, por ahora lo haremos a mano una por una, sin embargo es importante que usted sepa que existen herramientas para aumatizar este proceso, entre ellas encontramos Azure Resource Manager, OsDisk Images, Terraform con Vagrant y Paker, Puppet, Ansible entre otras.
+Esto deja la aplicación corriendo permanentemente en cada VM.
 
-#### Probar el resultado final de nuestra infraestructura
+<img src="images/ForeverList.png">
 
-1. Porsupuesto el endpoint de acceso a nuestro sistema será la IP pública del balanceador de carga, primero verifiquemos que los servicios básicos están funcionando, consuma los siguientes recursos:
+---
+
+# Prueba del Balanceador de Carga
+
+Probamos la IP pública del Load Balancer:
 
 ```
-http://52.155.223.248/
-http://52.155.223.248/fibonacci/1
+http://68.220.20.223/
+http://68.220.20.223/fibonacci/1
 ```
 
-2. Realice las pruebas de carga con `newman` que se realizaron en la parte 1 y haga un informe comparativo donde contraste: tiempos de respuesta, cantidad de peticiones respondidas con éxito, costos de las 2 infraestrucruras, es decir, la que desarrollamos con balanceo de carga horizontal y la que se hizo con una maquina virtual escalada.
+<img src="images/LoadBalancerWorking.png">
+<img src="images/LoadBalancerFibonacciWorking.png">
 
-3. Agregue una 4 maquina virtual y realice las pruebas de newman, pero esta vez no lance 2 peticiones en paralelo, sino que incrementelo a 4. Haga un informe donde presente el comportamiento de la CPU de las 4 VM y explique porque la tasa de éxito de las peticiones aumento con este estilo de escalabilidad.
+---
+
+# Newman – Comparación Parte 1 (escalamiento vertical) vs Parte 2 (balanceador de carga)
+
+Se ejecutó:
+
+```
+newman run collection.json -e environment.json -n 10 &
+newman run collection.json -e environment.json -n 10
+```
+
+### Resultados Parte 2 (Balanceo de carga – 2 VM)
+
+<img src="images/PostmanSameTest.png">
+
+### Métricas de VM1
+
+<img src="images/VM1SameTest.png">
+
+### Métricas de VM2
+
+<img src="images/VM2SameTest.png">
+
+En la Parte 1, la arquitectura estaba compuesta por una sola máquina virtual procesando todas las solicitudes. Esto implicaba que toda la carga recaía sobre un único servidor, sin redundancia ni tolerancia a fallos. Aunque las pruebas se ejecutaron correctamente y todos los requests fueron respondidos con éxito, el sistema dependía totalmente de la disponibilidad de esa única VM.
+
+En la Parte 2, la infraestructura se amplió mediante dos máquinas virtuales detrás de un Load Balancer. Ambas instancias ejecutaban la aplicación de Fibonacci en paralelo, distribuyendo automáticamente las solicitudes entrantes. Como resultado, se observó una leve mejora en el tiempo de respuesta promedio, además de una mayor estabilidad en la entrega de peticiones. Esto también se reflejó en una infraestructura con mayor disponibilidad, ya que si una VM falla, la otra continúa atendiendo tráfico sin interrumpir el servicio.
+
+Aunque el costo de mantener dos VM más un balanceador de carga es mayor que el de una sola máquina, esta arquitectura aporta redundancia, alta disponibilidad y tolerancia a fallos, lo que es fundamental cuando la continuidad del servicio es crítica.
+
+En conclusión, mientras que la primera arquitectura ofrecía simplicidad y menor costo, la segunda proporciona un sistema más robusto y preparado para escenarios de mayor demanda o fallos inesperados.
+
+# Escalamiento a 4 VMs y ejecución de 4 comandos en paralelo
+
+Se ejecutó:
 
 ```
 newman run ARSW_LOAD-BALANCING_AZURE.postman_collection.json -e [ARSW_LOAD-BALANCING_AZURE].postman_environment.json -n 10 &
@@ -582,14 +664,53 @@ newman run ARSW_LOAD-BALANCING_AZURE.postman_collection.json -e [ARSW_LOAD-BALAN
 newman run ARSW_LOAD-BALANCING_AZURE.postman_collection.json -e [ARSW_LOAD-BALANCING_AZURE].postman_environment.json -n 10
 ```
 
-**Preguntas**
+### Resultados Esperados
+
+No se pudo realizar una prueba concreta de esta parte debido a las limitaciones explicadas anteriormente sobre la cuenta de Azure for Students, pero se espera que los resultados sean los siguientes:
+
+- Las peticiones completas aumentaron significativamente
+- La tasa de fallos disminuyó
+- Cada VM procesó menos carga individual
+- El CPU no llegó a saturarse en ninguna VM
+
+> **Conclusión:** La tasa de éxito aumenta porque la carga se divide en más nodos, evitando que una sola máquina quede saturada como ocurría con escalamiento vertical.
+
+---
+
+# Diagrama de Despliegue
+
+<img src="images/diagram-deployment.png">
+
+---
+
+## Preguntas
 
 - ¿Cuáles son los tipos de balanceadores de carga en Azure y en qué se diferencian?, ¿Qué es SKU, qué tipos hay y en qué se diferencian?, ¿Por qué el balanceador de carga necesita una IP pública?
+
+El Public Load Balancer, que distribuye tráfico proveniente de Internet; el Internal Load Balancer, que opera exclusivamente dentro de una red virtual; y el Application Gateway, orientado a capa 7, con capacidades avanzadas como enrutamiento inteligente y protección mediante WAF.
+
+Para los SKUs, la versión Standard proporciona mayor disponibilidad, redundancia por zonas y es la opción recomendada para entornos productivos.
+
 - ¿Cuál es el propósito del _Backend Pool_?
+
+El Backend Pool define el conjunto de máquinas virtuales que recibirán el tráfico distribuido por el balanceador. En esencia, agrupa y expone los recursos computacionales que atenderán las solicitudes del servicio.
+
 - ¿Cuál es el propósito del _Health Probe_?
+
+El Health Probe permite al balanceador verificar el estado operativo de cada instancia del backend. Si una máquina deja de responder adecuadamente, se marca como no saludable y se excluye temporalmente del enrutamiento de tráfico.
+
 - ¿Cuál es el propósito de la _Load Balancing Rule_? ¿Qué tipos de sesión persistente existen, por qué esto es importante y cómo puede afectar la escalabilidad del sistema?.
+
+La regla de balanceo describe cómo se distribuye el tráfico entrante: especifica puerto, protocolo y el backend destino. También define el manejo de afinidad de sesión, cuyo uso puede afectar la escalabilidad al mantener a un cliente ligado a una instancia específica.
+
 - ¿Qué es una _Virtual Network_? ¿Qué es una _Subnet_? ¿Para qué sirven los _address space_ y _address range_?
+
+Una Virtual Network (VNet) constituye el espacio de red privado dentro de Azure donde se alojan los recursos. Las Subnets dividen ese espacio en segmentos lógicos independientes, cada uno con su propio rango de direcciones. El address space define el rango global de la VNet, y el address range define el rango específico asignado a cada Subnet.
+
 - ¿Qué son las _Availability Zone_ y por qué seleccionamos 3 diferentes zonas?. ¿Qué significa que una IP sea _zone-redundant_?
+
+Las Availability Zones son ubicaciones físicas independientes dentro de una misma región de Azure, diseñadas para evitar interrupciones por fallos localizados. Los recursos zone-redundant se distribuyen automáticamente entre distintas zonas, asegurando continuidad de servicio incluso si una de ellas falla.
+
 - ¿Cuál es el propósito del _Network Security Group_?
-- Informe de newman 1 (Punto 2)
-- Presente el Diagrama de Despliegue de la solución.
+
+El Network Security Group actúa como un componente de seguridad que controla el tráfico de red permitido o denegado hacia máquinas virtuales o subnets, operando como un firewall distribuido a nivel de red.
